@@ -1,0 +1,30 @@
+{
+  "name": "secret-caesar-mre",
+  "version": "1.0.0",
+  "description": "A social deduction game for VR",
+  "main": "built/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AltspaceVR/secret-caesar-mre.git"
+  },
+  "author": "Steven Vergenz <vergenzs@gmail.com>",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "bugs": {
+    "url": "https://github.com/AltspaceVR/secret-caesar-mre/issues"
+  },
+  "homepage": "https://github.com/AltspaceVR/secret-caesar-mre#readme",
+  "dependencies": {
+    "@microsoft/mixed-reality-extension-sdk": "^0.9.3",
+    "redis": "^2.8.0",
+    "typed-promisify": "^0.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^11.13.4",
+    "@types/redis": "^2.8.12",
+    "tslint": "^5.15.0",
+    "typescript": "^3.4.3"
+  }
+}
