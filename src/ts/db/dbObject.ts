@@ -1,3 +1,4 @@
+import parseCSV from '../util/parseCSV';
 import { createClient } from './redisClient';
 const client = createClient();
 
@@ -6,43 +7,46 @@ export type PropType = string | number | boolean | string[];
 export class DbObject {
 	protected cache: { [prop: string]: PropType } = {};
 	protected patch: { [prop: string]: PropType } = {};
+
+	public get id() { return (this.patch.id || this.cache.id) as string; }
+
 	constructor(protected type: string, id: string) {
 		this.patch.id = id;
 	}
 
 	public async load() {
-		let self = this;
-		return new Promise((resolve, reject) => {
-			client.hmgetAsync(self.type + ':' + self.get('id'), self.properties)
-				.then(result => {
-					self.properties.forEach((k, i) => {
-						if (result[i] !== null) {
-							switch (self.propTypes[k]) {
+		const currentProps = { ...this.patch, ...this.cache };
+		const propNames = Object.keys(currentProps);
+		const result = await client.hmgetAsync(`${this.type}:${this.id}`, ...propNames);
 
-								case 'csv':
-									self.cache[k] = parseCSV(result[i]);
-									break;
-								case 'int':
-								case 'bool':
-								case 'json':
-									self.cache[k] = JSON.parse(result[i]);
-									break;
-								case 'string':
-								default:
-									self.cache[k] = result[i];
-									break;
-							}
-						}
-					});
-					if (Object.keys(self.cache).length > 0)
-						self.delta = {};
-					resolve(this);
-				})
-				.catch(err => {
-					console.error(err);
-					reject(err);
-				});
-		});
+		for (let i = 0; i < propNames.length; i++) {
+			const name = propNames[i];
+			const val = result[i];
+
+			if (!val) continue;
+
+			let type = typeof currentProps[name] as string;
+			if (Array.isArray(currentProps[name])) {
+				type = 'csv';
+			}
+
+			switch (type) {
+				case 'csv':
+					this.cache[name] = parseCSV(result[i]);
+					break;
+				case 'number':
+				case 'boolean':
+					this.cache[name] = JSON.parse(result[i]);
+					break;
+				case 'string':
+				default:
+					this.cache[name] = result[i];
+					break;
+			}
+		}
+
+		if (Object.keys(this.cache).length > 0)
+			this.patch = {};
 	}
 
 	save() {
