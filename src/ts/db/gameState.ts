@@ -1,4 +1,4 @@
-import { DbObject, Player, Vote } from './index';
+import { DbObject, Player, Vote } from '.';
 
 export enum State {
 	Setup = 0,
@@ -146,14 +146,11 @@ export class GameState extends DbObject {
 	public players: { [id: string]: Player } = {};
 	public votes: { [id: string]: Vote } = {};
 
-	constructor(id: string) {
+	public constructor(id: string) {
 		super('game', id);
 		this.patch = {
 			...this.patch,
-			/*
-			State one of: setup, tutorial, night, nominate, election, lameDuck, policy1, policy2,
-			veto, aftermath, investigate, peek, nameSuccessor, execute, done
-			*/
+
 			state: State.Setup as number,
 			turnOrder: [], // CSV of userIds
 			votesInProgress: [], // CSV of voteIds

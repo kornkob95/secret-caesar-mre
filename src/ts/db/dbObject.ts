@@ -1,5 +1,5 @@
 import { createClient } from 'redis';
-import { delAsync, execAsync, hmgetAsync } from './redisClient';
+import { delAsync, execAsync, hmgetAsync } from './redisPromises';
 
 import parseCSV from '../util/parseCSV';
 const client = createClient();
@@ -12,14 +12,14 @@ export class DbObject {
 
 	public get id() { return this.get('id') as string; }
 
-	constructor(private type: string, id: string) {
+	protected constructor(private dbType: string, id: string) {
 		this.patch.id = id;
 	}
 
 	public async load() {
 		const currentProps = { ...this.patch, ...this.cache };
 		const propNames = Object.keys(currentProps);
-		const result = await hmgetAsync(client, `${this.type}:${this.id}`, ...propNames);
+		const result = await hmgetAsync(client, `${this.dbType}:${this.id}`, ...propNames);
 
 		for (let i = 0; i < propNames.length; i++) {
 			const name = propNames[i];
@@ -83,8 +83,8 @@ export class DbObject {
 		}
 
 		await execAsync(client.multi()
-			.hmset(this.type + ':' + this.id, dbSafe)
-			.expire(this.type + ':' + this.id, 60 * 60 * 24)
+			.hmset(this.dbType + ':' + this.id, dbSafe)
+			.expire(this.dbType + ':' + this.id, 60 * 60 * 24)
 		);
 
 		Object.assign(this.cache, this.patch);
@@ -117,7 +117,7 @@ export class DbObject {
 	}
 
 	public async destroy() {
-		await delAsync(client, this.type + ':' + this.id);
+		await delAsync(client, this.dbType + ':' + this.id);
 		this.patch = { ...this.cache, ...this.patch };
 		this.cache = {};
 	}
