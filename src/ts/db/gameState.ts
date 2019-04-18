@@ -1,4 +1,4 @@
-import { DbObject } from './index';
+import { DbObject, Player, Vote } from './index';
 
 export enum State {
 	Setup = 0,
@@ -18,22 +18,133 @@ export enum State {
 	Done
 }
 
+export enum Policy {
+	Fascist = 0,
+	Liberal
+}
+
 export class GameState extends DbObject {
 	public get state() {
-		return (this.patch.state || this.cache.state) as State;
+		return this.get('state') as State;
 	}
 	public set state(val) {
-		this.patch.state = val;
+		this.set('state', val as number);
 	}
 
 	public get turnOrder() {
-		return (this.patch.turnOrder || this.cache.turnOrder) as string[];
+		return this.get('turnOrder') as string[];
 	};
 	public set turnOrder(val) {
-		this.patch.turnOrder = val;
+		this.set('turnOrder', val);
 	}
 
-	public votesInProgress: string[];
+	public get votesInProgress() {
+		return this.get('votesInProgress') as string[];
+	}
+	public set votesInProgress(val) {
+		this.set('votesInProgress', val);
+	}
+
+	public get president() {
+		return this.get('president') as string;
+	}
+	public set president(val) {
+		this.set('president', val);
+	}
+
+	public get chancellor() {
+		return this.get('chancellor') as string;
+	}
+	public set chancellor(val) {
+		this.set('chancellor', val);
+	}
+
+	public get lastPresident() {
+		return this.get('lastPresident') as string;
+	}
+	public set lastPresident(val) {
+		this.set('lastPresident', val);
+	}
+
+	public get lastChancellor() {
+		return this.get('lastChancellor') as string;
+	}
+	public set lastChancellor(val) {
+		this.set('lastChancellor', val);
+	}
+
+	public get lastElection() {
+		return this.get('lastElection') as string;
+	}
+	public set lastElection(val) {
+		this.set('lastElection', val);
+	}
+
+	public get liberalPolicies() {
+		return this.get('liberalPolicies') as number;
+	}
+	public set liberalPolicies(val) {
+		this.set('liberalPolicies', val);
+	}
+
+	public get fascistPolicies() {
+		return this.get('fascistPolicies') as number;
+	}
+	public set fascistPolicies(val) {
+		this.set('fascistPolicies', val);
+	}
+
+	public get deck() {
+		return this.get('deck') as Policy[];
+	}
+	public set deck(val) {
+		this.set('deck', val as number[]);
+	}
+
+	public get discardPile() {
+		return this.get('discard') as Policy[];
+	}
+	public set discardPile(val) {
+		this.set('discard', val as number[]);
+	}
+
+	public get hand() {
+		return this.get('hand') as Policy[];
+	}
+	public set hand(val) {
+		this.set('hand', val as number[]);
+	}
+
+	public get specialElection() {
+		return this.get('specialElection') as boolean;
+	}
+	public set specialElection(val) {
+		this.set('specialElection', val);
+	}
+
+	public get failedVotes() {
+		return this.get('failedVotes') as number;
+	}
+	public set failedVotes(val) {
+		this.set('failedVotes', val);
+	}
+
+	public get victory() {
+		return this.get('victory') as string;
+	}
+	public set victory(val) {
+		this.set('victory', val);
+	}
+
+	public get tutorial() {
+		return this.get('tutorial') as string;
+	}
+	public set tutorial(val) {
+		this.set('tutorial', val);
+	}
+
+	public players: { [id: string]: Player } = {};
+	public votes: { [id: string]: Vote } = {};
 
 	constructor(id: string) {
 		super('game', id);
@@ -43,7 +154,7 @@ export class GameState extends DbObject {
 			State one of: setup, tutorial, night, nominate, election, lameDuck, policy1, policy2,
 			veto, aftermath, investigate, peek, nameSuccessor, execute, done
 			*/
-			state: 'setup',
+			state: State.Setup as number,
 			turnOrder: [], // CSV of userIds
 			votesInProgress: [], // CSV of voteIds
 			president: '', // userId
@@ -54,82 +165,53 @@ export class GameState extends DbObject {
 
 			liberalPolicies: 0,
 			fascistPolicies: 0,
-			// bit-packed boolean array. liberal=1, fascist=0
-			// most sig bit is 1. least sig bit is top of deck
-			deck: 0x1, // bpba
-			discard: 0x1, // bpba
-			hand: 0x1, // bpba
+			deck: [],
+			discard: [],
+			hand: [],
 			specialElection: false,
 			failedVotes: 0,
 			victory: '',
 			tutorial: ''
 		};
-
-		Object.assign(this.propTypes, {
-			id: 'string',
-			state: 'string',
-			turnOrder: 'csv',
-			votesInProgress: 'csv',
-			president: 'string',
-			chancellor: 'string',
-			lastPresident: 'string',
-			lastChancellor: 'string',
-			lastElection: 'string',
-			liberalPolicies: 'int',
-			fascistPolicies: 'int',
-			deck: 'int',
-			discard: 'int',
-			hand: 'int',
-			specialElection: 'bool',
-			failedVotes: 'int',
-			victory: 'string',
-			tutorial: 'string'
-		});
-
-		this.properties.push(...Object.keys(defaults));
-		Object.assign(this.delta, defaults);
-		this.players = {};
-		this.votes = {};
 	}
 
-	loadPlayers() {
-		this.get('turnOrder').forEach((e => {
-			this.players[e] = new Player(e);
-		}).bind(this));
+	public loadPlayers() {
+		const promises: Promise<void>[] = [];
+		for (const playerId of this.turnOrder) {
+			this.players[playerId] = new Player(playerId);
+			promises.push(this.players[playerId].load());
+		}
 
-		return Promise.all(
-			this.get('turnOrder').map(
-				(e => this.players[e].load()).bind(this)
-			)
-		);
+		return Promise.all(promises);
 	}
 
-	serializePlayers(hideSecrets = false) {
-		let c = {};
-		for (let i in this.players) {
-			c[i] = this.players[i].serialize(hideSecrets);
+	public serializePlayers() {
+		const c: { [id: string]: any } = {};
+		for (let id in this.players) {
+			c[id] = this.players[id].serialize();
 		}
 		return c;
 	}
 
-	loadVotes() {
-		this.get('votesInProgress').forEach((e => {
-			this.votes[e] = new Vote(e);
-		}).bind(this));
+	public loadVotes() {
+		const promises: Promise<void>[] = [];
+		for (const voteId of this.votesInProgress) {
+			const v = this.votes[voteId] = new Vote(voteId);
+			promises.push(v.load());
+		}
 
-		let lastElection = this.get('lastElection');
-		if (lastElection)
-			this.votes[lastElection] = new Vote(lastElection);
+		if (this.lastElection) {
+			const e = this.votes[this.lastElection] = new Vote(this.lastElection);
+			promises.push(e.load());
+		}
 
-		return Promise.all(
-			Object.keys(this.votes).map(e => this.votes[e].load())
-		);
+		return Promise.all(promises);
 	}
 
-	serializeVotes() {
-		let c = {};
-		for (let i in this.votes) {
-			c[i] = this.votes[i].serialize();
+	public serializeVotes() {
+		let c: { [id: string]: any } = {};
+		for (let id in this.votes) {
+			c[id] = this.votes[id].serialize();
 		}
 		return c;
 	}

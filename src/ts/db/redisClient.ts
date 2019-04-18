@@ -1,14 +1,37 @@
 import redis from 'redis';
 
-import { promisify } from 'typed-promisify';
-
-export class RedisPromiseClient extends redis.RedisClient {
-	constructor(options: redis.ClientOpts) {
-		super(options);
-	}
-	public hmgetAsync = promisify(super.hmget).bind(this) as (...args: string[]) => Promise<string[]>;
+export function hmgetAsync(client: redis.RedisClient, ...args: string[]): Promise<string[]> {
+	return new Promise((resolve, reject) => {
+		client.hmget(...args, (err, reply) => {
+			if (err) {
+				reject(err);
+			} else {
+				resolve(reply);
+			}
+		});
+	});
 }
 
-export function createClient(options: redis.ClientOpts = { host: 'localhost', port: 6379 }) {
-	return new RedisPromiseClient(options);
+export function execAsync(multi: redis.Multi): Promise<any[]> {
+	return new Promise((resolve, reject) => {
+		multi.exec((err, reply) => {
+			if (err) {
+				reject(err);
+			} else {
+				resolve(reply);
+			}
+		})
+	})
+}
+
+export function delAsync(client: redis.RedisClient, ...args: string[]) {
+	return new Promise((resolve, reject) => {
+		client.del(...args, (err, reply) => {
+			if (err) {
+				reject(err);
+			} else {
+				resolve(reply);
+			}
+		});
+	});
 }

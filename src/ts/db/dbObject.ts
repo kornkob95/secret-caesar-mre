@@ -1,23 +1,25 @@
+import { createClient } from 'redis';
+import { delAsync, execAsync, hmgetAsync } from './redisClient';
+
 import parseCSV from '../util/parseCSV';
-import { createClient } from './redisClient';
 const client = createClient();
 
-export type PropType = string | number | boolean | string[];
+export type PropType = string | number | boolean | string[] | number[];
 
 export class DbObject {
 	protected cache: { [prop: string]: PropType } = {};
 	protected patch: { [prop: string]: PropType } = {};
 
-	public get id() { return (this.patch.id || this.cache.id) as string; }
+	public get id() { return this.get('id') as string; }
 
-	constructor(protected type: string, id: string) {
+	constructor(private type: string, id: string) {
 		this.patch.id = id;
 	}
 
 	public async load() {
 		const currentProps = { ...this.patch, ...this.cache };
 		const propNames = Object.keys(currentProps);
-		const result = await client.hmgetAsync(`${this.type}:${this.id}`, ...propNames);
+		const result = await hmgetAsync(client, `${this.type}:${this.id}`, ...propNames);
 
 		for (let i = 0; i < propNames.length; i++) {
 			const name = propNames[i];
@@ -49,82 +51,74 @@ export class DbObject {
 			this.patch = {};
 	}
 
-	save() {
-		let self = this;
-		return new Promise((resolve, reject) => {
-			if (Object.keys(self.delta).length === 0)
-				resolve({});
+	public async save() {
+		if (Object.keys(this.patch).length === 0)
+			return {};
 
-			let dbSafe = {};
-			for (let i in self.delta) {
-				switch (self.propTypes[i]) {
-					case 'csv':
-						dbSafe[i] = self.delta[i].join(',');
-						break;
-					case 'int':
-					case 'bool':
-					case 'json':
-						dbSafe[i] = JSON.stringify(self.delta[i]);
-						break;
-					case 'string':
-					default:
-						dbSafe[i] = self.delta[i];
-				}
+		const dbSafe: { [key: string]: string } = {};
+		const currentProps = { ...this.patch, ...this.cache };
+		const propNames = Object.keys(currentProps);
+
+		for (let i = 0; i < propNames.length; i++) {
+			const name = propNames[i];
+
+			let type = typeof currentProps[name] as string;
+			if (Array.isArray(currentProps[name])) {
+				type = 'csv';
 			}
 
-			client.multi()
-				.hmset(self.type + ':' + self.get('id'), dbSafe)
-				.expire(self.type + ':' + self.get('id'), 60 * 60 * 24)
-				.execAsync()
-				.then(result => {
-					Object.assign(self.cache, self.delta);
-					resolve(self.delta);
-					self.delta = {};
-				})
-				.catch(err => {
-					reject(err);
-				});
-		});
+			switch (type) {
+				case 'csv':
+					dbSafe[name] = (this.patch[name] as any[]).join(',');
+					break;
+				case 'number':
+				case 'boolean':
+					dbSafe[name] = JSON.stringify(this.patch[name]);
+					break;
+				case 'string':
+				default:
+					dbSafe[name] = this.patch[name] as string;
+					break;
+			}
+		}
+
+		await execAsync(client.multi()
+			.hmset(this.type + ':' + this.id, dbSafe)
+			.expire(this.type + ':' + this.id, 60 * 60 * 24)
+		);
+
+		Object.assign(this.cache, this.patch);
+		const oldPatch = this.patch;
+		this.patch = {};
+		return oldPatch;
 	}
 
-	discard() {
-		self.delta = {};
+	public discard() {
+		this.patch = {};
 	}
 
-	get(field) {
-		if (this.delta[field] !== undefined)
-			return this.delta[field];
+	protected get(field: string) {
+		if (this.patch[field] !== undefined)
+			return this.patch[field];
 		else if (this.cache[field] !== undefined)
 			return this.cache[field];
 	}
 
-	set(field, val) {
-		if (this.cache[field] !== undefined || this.delta[field] !== undefined)
-			this.delta[field] = val;
+	protected set(field: string, val: PropType) {
+		if (this.cache[field] !== undefined || this.patch[field] !== undefined)
+			this.patch[field] = val;
 		else {
 			throw new Error(`Field ${field} is not valid on this object`);
 		}
 	}
 
-	serialize() {
-		let safe = {};
-		Object.assign(safe, this.cache, this.delta);
-		return safe;
+	public serialize() {
+		return { ...this.cache, ...this.patch };
 	}
 
-	destroy() {
-		let self = this;
-		return new Promise((resolve, reject) => {
-			client.delAsync(self.type + ':' + self.get('id'))
-				.then(result => {
-					self.delta = Object.assign({}, self.cache, self.delta);
-					self.cache = {};
-					resolve();
-				})
-				.catch(err => {
-					console.error(err);
-					reject(err);
-				});
-		});
+	public async destroy() {
+		await delAsync(client, this.type + ':' + this.id);
+		this.patch = { ...this.cache, ...this.patch };
+		this.cache = {};
 	}
 }
