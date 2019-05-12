@@ -10,14 +10,14 @@ export class Nametag {
 				parentId: this.model.id,
 				transform: {
 					local: {
-						position: { x: 0.02 },
+						position: { x: 0.02, y: 0.01 },
 						rotation: MRE.Quaternion.FromEulerAngles(30 * MRE.DegreesToRadians, -Math.PI / 2, 0),
 						scale: { x: 0.8, y: 0.8, z: 0.8 }
 					}
 				},
 				text: {
-					contents: "<Join>",
-					height: 0.06,
+					contents: "<Click To Join>",
+					height: 0.04,
 					anchor: MRE.TextAnchorLocation.MiddleCenter,
 					justify: MRE.TextJustify.Center
 				}
@@ -28,14 +28,14 @@ export class Nametag {
 				parentId: this.model.id,
 				transform: {
 					local: {
-						position: { x: -0.02 },
+						position: { x: -0.02, y: 0.01 },
 						rotation: MRE.Quaternion.FromEulerAngles(30 * MRE.DegreesToRadians, Math.PI / 2, 0),
 						scale: { x: 0.8, y: 0.8, z: 0.8 }
 					}
 				},
 				text: {
-					contents: "<Join>",
-					height: 0.06,
+					contents: "<Click To Join>",
+					height: 0.04,
 					anchor: MRE.TextAnchorLocation.MiddleCenter,
 					justify: MRE.TextJustify.Center
 				}
@@ -43,12 +43,12 @@ export class Nametag {
 		}).value;
 		this.labels = [label1.text, label2.text];
 
-		this.model.setCollider('box', false, undefined, new MRE.Vector3(0.2, 0.03, 0.03));
+		this.model.setCollider('box', false, undefined, new MRE.Vector3(0.04, 0.04, 0.2));
 		this.model.setBehavior(MRE.ButtonBehavior)
-			.onClick('released', user => this.requestJoinSeat(user));
+			.onClick('released', user => this.clicked(user));
 	}
 
-	private requestJoinSeat(user: MRE.User) {
+	private clicked(user: MRE.User) {
 
 	}
 }
