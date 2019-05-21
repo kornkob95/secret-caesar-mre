@@ -1,3 +1,4 @@
+export * from './layout';
 export * from './table';
 export * from './nametag';
-export * from './presentation';
+export * from './displayArea';
