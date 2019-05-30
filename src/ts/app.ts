@@ -1,14 +1,14 @@
 import * as MRE from '@microsoft/mixed-reality-extension-sdk';
 import * as DB from './db';
 
-import { Nametag, DisplayArea, Table, layOutGame } from './presentation';
+import { Seat, DisplayArea, Table, layOutGame } from './presentation';
 import { requestJoin } from './logic';
 
 export class App {
     public game: DB.GameState;
     public table: Table;
     public displayArea: DisplayArea;
-    public nametags: Nametag[];
+    public seats: Seat[];
 
     constructor(public context: MRE.Context, public baseUrl: string, public params: MRE.ParameterSet = {}) {
         this.game = new DB.GameState(context.sessionId);
