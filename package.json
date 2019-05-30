@@ -4,7 +4,8 @@
   "description": "A social deduction game for VR",
   "main": "built/index.js",
   "scripts": {
-    "build": "tsc --build",
+    "build": "tsc --build ./tsconfig.json",
+    "build-tools": "tsc --build ./tsconfig-tools.json",
     "start": "node ."
   },
   "repository": {
