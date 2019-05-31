@@ -62,7 +62,7 @@ export class Player extends DbObject {
             ...this.patch,
             displayName: '',
             isModerator: false,
-            seatId: null,
+            seatId: -1,
             role: PlayerRole.Unassigned,
             state: PlayerState.Normal,
             connected: true

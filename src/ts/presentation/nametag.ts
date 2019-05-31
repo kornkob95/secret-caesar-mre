@@ -71,7 +71,11 @@ export class Nametag {
             this.requestKick();
     }
 
-    private requestJoin(user: MRE.UserLike) {
+    private async requestJoin(user: MRE.UserLike) {
+        const p = new DB.Player(user.id);
+        p.displayName = user.name;
+        p.isModerator = /moderator/.test(user.properties['altspacevr-roles']);
+        await p.save();
         requestJoin(this.app.game, user, this.seat.index);
     }
 
