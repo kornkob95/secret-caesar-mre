@@ -1,3 +1,4 @@
+import { EventEmitter } from 'events';
 import { createClient } from 'redis';
 import { delAsync, execAsync, hmgetAsync } from './redisPromises';
 
@@ -6,119 +7,129 @@ const client = createClient();
 
 export type PropType = string | number | boolean | string[] | number[];
 
-export class DbObject {
-	protected cache: { [prop: string]: PropType } = {};
-	protected patch: { [prop: string]: PropType } = {};
+function collectPatchOriginal(patch: any, original: any): any {
 
-	public get id() { return this.get('id') as string; }
+}
 
-	protected constructor(private dbType: string, id: string) {
-		this.patch.id = id;
-	}
+export class DbObject extends EventEmitter {
+    protected cache: { [prop: string]: PropType } = {};
+    protected patch: { [prop: string]: PropType } = {};
 
-	public async load() {
-		const currentProps = { ...this.patch, ...this.cache };
-		const propNames = Object.keys(currentProps);
-		const result = await hmgetAsync(client, `${this.dbType}:${this.id}`, ...propNames);
+    public get id() { return this.get('id') as string; }
 
-		for (let i = 0; i < propNames.length; i++) {
-			const name = propNames[i];
-			const val = result[i];
+    protected constructor(private dbType: string, id: string) {
+        super();
+        this.patch.id = id;
+    }
 
-			if (!val) continue;
+    public async load() {
+        const currentProps = { ...this.patch, ...this.cache };
+        const propNames = Object.keys(currentProps);
+        const result = await hmgetAsync(client, `${this.dbType}:${this.id}`, ...propNames);
 
-			let type = typeof currentProps[name] as string;
-			if (Array.isArray(currentProps[name])) {
-				type = 'csv';
-			}
+        for (let i = 0; i < propNames.length; i++) {
+            const name = propNames[i];
+            const val = result[i];
 
-			switch (type) {
-				case 'csv':
-					this.cache[name] = parseCSV(result[i]);
-					break;
-				case 'number':
-				case 'boolean':
-					this.cache[name] = JSON.parse(result[i]);
-					break;
-				case 'string':
-				default:
-					this.cache[name] = result[i];
-					break;
-			}
-		}
+            if (!val) continue;
 
-		if (Object.keys(this.cache).length > 0)
-			this.patch = {};
-	}
+            let type = typeof currentProps[name] as string;
+            if (Array.isArray(currentProps[name])) {
+                type = 'csv';
+            }
 
-	public async save() {
-		if (Object.keys(this.patch).length === 0)
-			return {};
+            switch (type) {
+                case 'csv':
+                    this.cache[name] = parseCSV(result[i]);
+                    break;
+                case 'number':
+                case 'boolean':
+                    this.cache[name] = JSON.parse(result[i]);
+                    break;
+                case 'string':
+                default:
+                    this.cache[name] = result[i];
+                    break;
+            }
+        }
 
-		const dbSafe: { [key: string]: string } = {};
-		const currentProps = { ...this.patch, ...this.cache };
-		const propNames = Object.keys(currentProps);
+        if (Object.keys(this.cache).length > 0)
+            this.patch = {};
+    }
 
-		for (let i = 0; i < propNames.length; i++) {
-			const name = propNames[i];
+    public async save() {
+        if (Object.keys(this.patch).length === 0)
+            return {};
 
-			let type = typeof currentProps[name] as string;
-			if (Array.isArray(currentProps[name])) {
-				type = 'csv';
-			}
+        const dbSafe: { [key: string]: string } = {};
+        const currentProps = { ...this.patch, ...this.cache };
+        const propNames = Object.keys(currentProps);
 
-			switch (type) {
-				case 'csv':
-					dbSafe[name] = (this.patch[name] as any[]).join(',');
-					break;
-				case 'number':
-				case 'boolean':
-					dbSafe[name] = JSON.stringify(this.patch[name]);
-					break;
-				case 'string':
-				default:
-					dbSafe[name] = this.patch[name] as string;
-					break;
-			}
-		}
+        for (let i = 0; i < propNames.length; i++) {
+            const name = propNames[i];
 
-		await execAsync(client.multi()
-			.hmset(this.dbType + ':' + this.id, dbSafe)
-			.expire(this.dbType + ':' + this.id, 60 * 60 * 24)
-		);
+            let type = typeof currentProps[name] as string;
+            if (Array.isArray(currentProps[name])) {
+                type = 'csv';
+            }
 
-		Object.assign(this.cache, this.patch);
-		const oldPatch = this.patch;
-		this.patch = {};
-		return oldPatch;
-	}
+            switch (type) {
+                case 'csv':
+                    dbSafe[name] = (this.patch[name] as any[]).join(',');
+                    break;
+                case 'number':
+                case 'boolean':
+                    dbSafe[name] = JSON.stringify(this.patch[name]);
+                    break;
+                case 'string':
+                default:
+                    dbSafe[name] = this.patch[name] as string;
+                    break;
+            }
+        }
 
-	public discard() {
-		this.patch = {};
-	}
+        await execAsync(client.multi()
+            .hmset(this.dbType + ':' + this.id, dbSafe)
+            .expire(this.dbType + ':' + this.id, 60 * 60 * 24)
+        );
 
-	protected get(field: string) {
-		if (this.patch[field] !== undefined)
-			return this.patch[field];
-		else if (this.cache[field] !== undefined)
-			return this.cache[field];
-	}
+        // collect old values
+        const prePatchValues = collectPatchOriginal(this.patch, this.cache);
 
-	protected set(field: string, val: PropType) {
-		if (this.cache[field] !== undefined || this.patch[field] !== undefined)
-			this.patch[field] = val;
-		else {
-			throw new Error(`Field ${field} is not valid on this object`);
-		}
-	}
+        Object.assign(this.cache, this.patch);
+        const patch = this.patch;
+        this.patch = {};
 
-	public serialize() {
-		return { ...this.cache, ...this.patch };
-	}
+        this.emit('update', patch, prePatchValues);
+        return patch;
+    }
 
-	public async destroy() {
-		await delAsync(client, this.dbType + ':' + this.id);
-		this.patch = { ...this.cache, ...this.patch };
-		this.cache = {};
-	}
+    public discard() {
+        this.patch = {};
+    }
+
+    protected get(field: string) {
+        if (this.patch[field] !== undefined)
+            return this.patch[field];
+        else if (this.cache[field] !== undefined)
+            return this.cache[field];
+    }
+
+    protected set(field: string, val: PropType) {
+        if (this.cache[field] !== undefined || this.patch[field] !== undefined)
+            this.patch[field] = val;
+        else {
+            throw new Error(`Field ${field} is not valid on this object`);
+        }
+    }
+
+    public serialize() {
+        return { ...this.cache, ...this.patch };
+    }
+
+    public async destroy() {
+        await delAsync(client, this.dbType + ':' + this.id);
+        this.patch = { ...this.cache, ...this.patch };
+        this.cache = {};
+    }
 }

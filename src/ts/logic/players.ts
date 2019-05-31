@@ -45,14 +45,14 @@ export async function requestJoin(game: DB.GameState, user: MRE.UserLike, seatId
     }
 }
 
-export async function requestLeave(game: DB.GameState, user: MRE.UserLike) {
-    const player = new DB.Player(user.id);
+export async function requestLeave(game: DB.GameState, userId: string) {
+    const player = new DB.Player(userId);
 
     // fetch game and player records from db
     await Promise.all([game.load(), player.load()]);
 
     // check if player is in game
-    let i = game.turnOrder.indexOf(user.id);
+    let i = game.turnOrder.indexOf(userId);
     if (i > -1) {
         // if so, remove from game
         game.turnOrder.splice(i, 1);

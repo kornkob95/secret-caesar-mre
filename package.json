@@ -20,10 +20,10 @@
   "homepage": "https://github.com/AltspaceVR/secret-caesar-mre#readme",
   "dependencies": {
     "@microsoft/mixed-reality-extension-sdk": "^0.10.1",
+    "@types/node": "^11.13.13",
     "redis": "^2.8.0"
   },
   "devDependencies": {
-    "@types/node": "^11.13.4",
     "@types/redis": "^2.8.12",
     "tslint": "^5.15.0",
     "typescript": "^3.4.3"

@@ -49,6 +49,13 @@ export class Player extends DbObject {
         this.set('state', val as number);
     }
 
+    public get connected() {
+        return this.get('connected') as boolean;
+    }
+    public set connected(val) {
+        this.set('connected', val as boolean);
+    }
+
     public constructor(id: string) {
         super('player', id);
         this.patch = {
@@ -57,7 +64,8 @@ export class Player extends DbObject {
             isModerator: false,
             seatId: null,
             role: PlayerRole.Unassigned,
-            state: PlayerState.Normal
+            state: PlayerState.Normal,
+            connected: true
         };
     }
 }
