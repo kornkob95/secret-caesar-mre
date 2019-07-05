@@ -73,7 +73,7 @@ export class Ballot {
 		}}).value;
 		this.question = textActor.text;
 
-		this.app.game.on('update', state => {
+		this.app.game.on('update_votesInProgress', patch => {
 
 		});
 	}

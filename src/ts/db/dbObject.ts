@@ -105,7 +105,10 @@ export class DbObject extends EventEmitter {
 		const patch = this.patch;
 		this.patch = {};
 
-		this.emit('update', patch, prePatchValues);
+		for (const field in patch) {
+			console.log(`${this.dbType}:${this.id} update_${field}`);
+			this.emit(`update_${field}`, patch, prePatchValues);
+		}
 		return patch;
 	}
 

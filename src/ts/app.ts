@@ -29,7 +29,7 @@ export class App {
 
 	}
 
-	public updatePlayerConnectionStatus(user: MRE.User, status: boolean) {
+	private updatePlayerConnectionStatus(user: MRE.User, status: boolean) {
 		const player = this.game.players[user.id];
 		if (player) {
 			player.connected = status;

@@ -39,9 +39,7 @@ export class Seat {
 		this.ballot = new Ballot(app, this);
 		this.ballot.askQuestion('Hello world');
 
-		app.game.on('update', patch => {
-			if (patch.turnOrder) this.updateOwnership();
-		});
+		app.game.on('update_turnOrder', () => this.updateOwnership());
 	}
 
 	private updateOwnership() {
