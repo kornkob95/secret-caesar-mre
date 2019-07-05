@@ -66,9 +66,9 @@ async function main(args: string[]) {
 Syntax: gltftool <command> <argument>
 commands:
 postprocess-table (ppt) - Takes a glTF file as argument that was freshly
-                          exported from table.blend, adds the other board
-                          textures to it, removes unused objects,
-                          packs the binary data, and strips whitespace.`
+						  exported from table.blend, adds the other board
+						  textures to it, removes unused objects,
+						  packs the binary data, and strips whitespace.`
 			);
 			break;
 	}
