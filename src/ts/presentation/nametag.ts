@@ -48,7 +48,7 @@ export class Nametag {
 
 		this.model.setCollider('box', false, undefined, new MRE.Vector3(0.04, 0.04, 0.2));
 		this.model.setBehavior(MRE.ButtonBehavior)
-			.onClick('released', user => this.clicked(user));
+			.onClick(user => this.clicked(user));
 	}
 
 	public updateText(text: string = "<Click To Join>", color: MRE.Color3Like = { r: 1, g: 1, b: 1 }) {
