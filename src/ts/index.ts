@@ -3,8 +3,8 @@ import { resolve as resolvePath } from 'path';
 
 import { App } from './app';
 
-process.on('uncaughtException', err => console.log('uncaughtException', err));
-process.on('unhandledRejection', reason => console.log('unhandledRejection', reason));
+//process.on('uncaughtException', err => console.log('uncaughtException', err));
+//process.on('unhandledRejection', reason => console.log('unhandledRejection', reason));
 
 // Start listening for connections, and serve static files
 const server = new MRE.WebHost({

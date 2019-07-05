@@ -1,11 +1,12 @@
 import * as MRE from '@microsoft/mixed-reality-extension-sdk';
-import { Nametag } from '.';
+import { Ballot, Nametag } from '.';
 import { App } from '..';
 import * as DB from '../db';
 
 export class Seat {
 	public index: number;
 	public nametag: Nametag;
+	public ballot: Ballot;
 
 	private _ownerId: string;
 	private _updateConnectionStatus = this.updateConnectionStatus.bind(this);
@@ -33,6 +34,10 @@ export class Seat {
 		// init nametag
 		const nametagModel = model.children.find(a => /^Nametag\d/.test(a.name));
 		this.nametag = new Nametag(app, this, nametagModel);
+
+		// init ballot
+		this.ballot = new Ballot(app, this);
+		this.ballot.askQuestion('Hello world');
 
 		app.game.on('update', patch => {
 			if (patch.turnOrder) this.updateOwnership();

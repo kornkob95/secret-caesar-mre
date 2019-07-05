@@ -54,11 +54,44 @@ async function postprocessTable(filename: string) {
 	await writeFile(gltfFile, JSON.stringify(gltf));
 }
 
+async function postprocessCards(filename: string) {
+	// read JSON
+	const gltfFile = path.resolve(process.cwd(), filename);
+	const strData = await readFile(gltfFile, { encoding: 'utf8' });
+	const gltf = JSON.parse(strData) as GLTF.GlTf;
+
+	// fix path
+	const img = gltf.images[0];
+	img.uri = path.relative(
+		path.dirname(gltfFile),
+		path.resolve(__dirname, '../../public/img/caesar/cards.jpg')
+	).replace(/\\/g, '/');
+
+	// remove redundant image references
+	gltf.images = gltf.images.slice(0, 1);
+	gltf.textures = gltf.textures.slice(0, 1);
+	for (const mat of gltf.materials) {
+		mat.pbrMetallicRoughness.baseColorTexture.index = 0;
+	}
+
+	// pack binary data
+	const binFile = path.resolve(path.dirname(gltfFile), gltf.buffers[0].uri)
+	gltf.buffers[0].uri = await convertToDataUrl(binFile);
+	await unlinkFile(binFile);
+
+	// output result
+	await writeFile(gltfFile, JSON.stringify(gltf));
+}
+
 async function main(args: string[]) {
 	switch (args[2]) {
 		case 'postprocess-table':
 		case 'ppt':
 			await postprocessTable(args[3]);
+			break;
+		case 'postprocess-cards':
+		case 'ppc':
+			await postprocessCards(args[3]);
 			break;
 		default:
 			console.log(
@@ -66,9 +99,13 @@ async function main(args: string[]) {
 Syntax: gltftool <command> <argument>
 commands:
 postprocess-table (ppt) - Takes a glTF file as argument that was freshly
-						  exported from table.blend, adds the other board
-						  textures to it, removes unused objects,
-						  packs the binary data, and strips whitespace.`
+                          exported from table.blend, adds the other board
+                          textures to it, removes unused objects,
+                          packs the binary data, and strips whitespace.
+postprocess-cards (ppc) - Takes a glTF file as argument that was freshly
+                          exported from cards.blend, rewrites the texture
+                          path to the img folder, removes redundant images,
+                          packs the binary data, and strips whitespace.`
 			);
 			break;
 	}

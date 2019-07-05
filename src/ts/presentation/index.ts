@@ -3,3 +3,4 @@ export * from './table';
 export * from './nametag';
 export * from './displayArea';
 export * from './seat';
+export * from './ballot';
