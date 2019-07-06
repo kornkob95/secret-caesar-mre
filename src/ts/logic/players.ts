@@ -49,11 +49,9 @@ export async function requestLeave(game: DB.GameState, userId: string) {
 	// fetch game and player records from db
 	await Promise.all([game.load(), player.load()]);
 
-	// check if player is in game
-	let i = game.turnOrder.indexOf(userId);
-	if (i > -1) {
-		// if so, remove from game
-		game.turnOrder.splice(i, 1);
+	// if player is in game, remove them
+	if (game.turnOrder.includes(userId)) {
+		game.turnOrder = game.turnOrder.filter(id => id !== userId);
 		await Promise.all([game.save(), player.destroy()]);
 	}
 }

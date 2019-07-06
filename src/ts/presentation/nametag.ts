@@ -6,6 +6,7 @@ import { requestJoin, requestLeave, requestKick } from '../logic';
 
 export class Nametag {
 	private labels: MRE.Text[];
+	private localQuestionAsked = false;
 
 	constructor(public app: App, public seat: Seat, public model: MRE.Actor) {
 		const label1 = MRE.Actor.CreateEmpty(this.app.context, {
@@ -79,8 +80,19 @@ export class Nametag {
 		requestJoin(this.app.game, p, this.seat.index);
 	}
 
-	private requestLeave() {
-
+	private async requestLeave() {
+		if(!this.localQuestionAsked)
+		{
+			this.localQuestionAsked = true;
+			const confirm = await this.seat.ballot.askQuestion('Are you sure you\nwant to leave?', 'local_leave')
+			.then(confirm => {
+				if(confirm){
+					SH.socket.emit('leave', SH.localUser.id);
+				}
+				self.question = null;
+			})
+			.catch(() => { self.question = null; });
+		}
 	}
 
 	private requestKick() {

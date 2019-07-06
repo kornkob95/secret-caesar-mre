@@ -10,6 +10,14 @@ export enum BallotType {
 	Policy
 }
 
+type QuestionOptions = {
+	choices: BallotType,
+	policyHand: DB.Policy[],
+	includeVeto: boolean,
+	fake: boolean,
+	isInvalid: () => boolean
+}
+
 export class Ballot {
 	public root: MRE.Actor;
 	public question: MRE.Text;
@@ -72,14 +80,18 @@ export class Ballot {
 			}
 		}}).value;
 		this.question = textActor.text;
-
-		this.app.game.on('update_votesInProgress', patch => {
-
-		});
 	}
 
-	public askQuestion(text: string) {
-		this.question.contents = text;
+	public askQuestion(qText: string, id: string, opt: Partial<QuestionOptions> = { }) {
+		const defaults: QuestionOptions = {
+			choices: BallotType.Binary,
+			policyHand: [],
+			includeVeto: false,
+			fake: false,
+			isInvalid: () => true };
+		opt = { ...defaults, ...opt };
+
+		this.question.contents = qText;
 		this.jaCard.appearance.enabled = true;
 		this.neinCard.appearance.enabled = true;
 	}
