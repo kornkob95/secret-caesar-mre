@@ -49,7 +49,9 @@ export class DbObject extends EventEmitter {
 					break;
 				case 'number':
 				case 'boolean':
-					this.cache[name] = JSON.parse(result[i]);
+					try {
+						this.cache[name] = JSON.parse(result[i]);
+					} catch { }
 					break;
 				case 'string':
 				default:
@@ -67,7 +69,7 @@ export class DbObject extends EventEmitter {
 			return {};
 
 		const dbSafe: { [key: string]: string } = {};
-		const currentProps = { ...this.patch, ...this.cache };
+		const currentProps = { ...this.patch };
 		const propNames = Object.keys(currentProps);
 
 		for (let i = 0; i < propNames.length; i++) {
@@ -92,7 +94,7 @@ export class DbObject extends EventEmitter {
 					break;
 			}
 		}
-
+		console.log(dbSafe);
 		await execAsync(client.multi()
 			.hmset(this.dbType + ':' + this.id, dbSafe)
 			.expire(this.dbType + ':' + this.id, 60 * 60 * 24)

@@ -75,6 +75,7 @@ export class Nametag {
 		const p = new DB.Player(user.id);
 		p.displayName = user.name;
 		p.isModerator = /moderator/.test(user.properties['altspacevr-roles']);
+		p.connected = true;
 		requestJoin(this.app.game, p, this.seat.index);
 	}
 
