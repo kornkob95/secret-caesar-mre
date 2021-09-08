@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc --build ./tsconfig.json",
     "build-tools": "tsc --build ./tsconfig-tools.json",
-    "start": "node ."
+    "start": "node": "14.x"
   },
   "repository": {
     "type": "git",
